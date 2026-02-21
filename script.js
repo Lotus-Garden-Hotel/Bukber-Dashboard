@@ -38,55 +38,50 @@ async function fetchData() {
 // ============================================
 // PROSES DATA DARI SHEETS API (ARRAY 2D)
 // ============================================
+// Ganti bagian processSheetData dengan logika yang lebih dinamis
 function processSheetData(rows) {
-    // rows adalah array 2D: [ [header1, header2, ...], [baris1], [baris2], ... ]
-    
-    // Header ada di baris pertama (indeks 0)
     const headers = rows[0] || [];
     
-    // Data reservasi: baris 1 sampai 30 (indeks 1-30) sesuai data Anda
-    const reservations = [];
-    for (let i = 1; i <= 30; i++) {
-        if (rows[i]) {
-            const row = rows[i];
-            const reservation = {};
-            headers.forEach((header, index) => {
-                if (header) {
-                    reservation[header] = row[index] !== undefined ? row[index] : 0;
-                }
-            });
-            reservations.push(reservation);
-        }
-    }
-    
-    // Baris total: indeks 30 (baris ke-31)
-    const totalRow = rows[30] || [];
-    // Baris target: indeks 31 (baris ke-32)
-    const targetRow = rows[31] || [];
-    // Baris variance: indeks 32 (baris ke-33)
-    const varianceRow = rows[32] || [];
-    
+    // Gunakan filter/find untuk mencari baris khusus, jangan tebak indeksnya
+    const totalRow = rows.find(row => row[0] === 'TOTAL') || [];
+    const targetRow = rows.find(row => row[0] === 'TARGET') || [];
+    const varianceRow = rows.find(row => row[0] === 'VARIANCE') || [];
+
+    // Ambil data reservasi (asumsi data adalah baris yang kolom pertamanya berisi tanggal/angka)
+    const reservations = rows.slice(1).filter(row => {
+        // Abaikan baris header, total, target, dan variance
+        return row[0] && !['TOTAL', 'TARGET', 'VARIANCE'].includes(row[0]);
+    }).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || 0);
+        return obj;
+    });
+
+    // Helper untuk membersihkan string ke angka
+    const cleanNum = (val) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        // Hapus karakter non-angka kecuali titik/koma desimal
+        return parseFloat(val.toString().replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
+    };
+
     const summary = {
         total2026: {
-            pax: totalRow[7] || 0,   // GLOBAL PAX (kolom H)
-            nett: totalRow[8] || 0    // GLOBAL NETT (kolom I)
+            pax: cleanNum(totalRow[7]), 
+            nett: cleanNum(totalRow[8])
         },
         target: {
-            pax: targetRow[6] || 3600, // TARGET PAX (kolom G)
-            nett: targetRow[7] || 282644628.10 // TARGET NETT (kolom H)
+            pax: cleanNum(targetRow[6]) || 3600,
+            nett: cleanNum(targetRow[7]) || 282644628
         }
     };
-    
-    const variance = varianceRow[7] || 0; // VARIANCE (kolom H)
-    
-    const lastUpdate = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    
+
     updateUI({
-        headers: headers,
-        reservations: reservations,
-        summary: summary,
-        variance: variance,
-        lastUpdate: lastUpdate
+        headers,
+        reservations,
+        summary,
+        variance: cleanNum(varianceRow[7]),
+        lastUpdate: new Date().toLocaleString('id-ID')
     });
 }
 
@@ -176,4 +171,5 @@ document.addEventListener('DOMContentLoaded', fetchData);
 
 // Refresh setiap 30 detik (sesuaikan kebutuhan)
 setInterval(fetchData, 30000);
+
 
