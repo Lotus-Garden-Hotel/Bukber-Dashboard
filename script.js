@@ -3,7 +3,7 @@
 // ============================================
 const SPREADSHEET_ID = '1WXOjbSZCOpVT9zpEvGfbegkxxaT0nhY6ry3mTUwe0pg';
 const API_KEY = 'AIzaSyBZjSmOA81ftVsIJT5etEL19NjPdYTVSQk';
-const RANGE = 'SUMMARY!A2:I33'; // Header + 30 daily + total + target
+const RANGE = 'SUMMARY!A1:J50'; // Ambil range cukup luas (sampai baris 50)
 
 const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
 
@@ -48,48 +48,88 @@ async function fetchData() {
 }
 
 // ============================================
-// PROSES DATA DARI SHEETS API
+// PROSES DATA DARI SHEETS API (DENGAN DETEKSI LABEL)
 // ============================================
 function processSheetData(rows) {
     // rows[0] = header
     const headers = rows[0] || [];
     
-    // Data reservasi: baris 1 sampai 30 (indeks 1-30)
-    const reservations = [];
-    for (let i = 1; i <= 30; i++) {
-        if (rows[i]) {
-            const row = rows[i];
-            const reservation = {};
-            headers.forEach((header, index) => {
-                if (header) {
-                    let value = row[index];
-                    // Parse angka untuk kolom yang berisi angka (PAX atau NETT)
-                    if (header.includes('PAX') || header.includes('NETT')) {
-                        reservation[header] = parseIndonesianNumber(value);
-                    } else {
-                        reservation[header] = value !== undefined ? value : '';
-                    }
-                }
-            });
-            reservations.push(reservation);
+    // 1. Ambil data harian (hingga baris sebelum ada label "TOTAL" di kolom A)
+    const dailyRows = [];
+    let totalRow = null;
+    let targetRow = null;
+    let varianceRow = null;
+    
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length === 0) continue;
+        
+        const firstCell = (row[0] || '').toString().toLowerCase().trim();
+        
+        if (firstCell.includes('total')) {
+            totalRow = row;
+        } else if (firstCell.includes('target')) {
+            targetRow = row;
+        } else if (firstCell.includes('variance') || firstCell.includes('%')) {
+            varianceRow = row;
+        } else {
+            // Jika bukan baris total/target/variance, anggap sebagai data harian
+            // Tapi batasi hingga 30 baris pertama agar aman
+            if (dailyRows.length < 30) {
+                dailyRows.push(row);
+            }
         }
     }
     
-    // Baris total: indeks 31 (baris ke-32)
-    const totalRow = rows[31] || [];
-    // Baris target: indeks 32 (baris ke-33)
-    const targetRow = rows[32] || [];
+    // Jika tidak menemukan baris total/target, gunakan indeks tetap (31 dan 32)
+    if (!totalRow && rows[30]) totalRow = rows[30];
+    if (!targetRow && rows[31]) targetRow = rows[31];
     
-    // Parsing total
-    const totalGlobalPax = parseIndonesianNumber(totalRow[7]);  // GLOBAL PAX di kolom H (indeks 7)
-    const totalGlobalNett = parseIndonesianNumber(totalRow[8]); // GLOBAL NETT di kolom I (indeks 8)
+    // Proses data harian
+    const reservations = dailyRows.map(row => {
+        const reservation = {};
+        headers.forEach((header, index) => {
+            if (header) {
+                let value = row[index];
+                if (header.includes('PAX') || header.includes('NETT')) {
+                    reservation[header] = parseIndonesianNumber(value);
+                } else {
+                    reservation[header] = value !== undefined ? value : '';
+                }
+            }
+        });
+        return reservation;
+    });
     
-    // Parsing target: berdasarkan screenshot, target pax di kolom D (indeks 3) dan target nett di kolom E (indeks 4)
-    const targetPax = parseIndonesianNumber(targetRow[3]) || 3600;
-    const targetNett = parseIndonesianNumber(targetRow[4]) || 282644628.10;
+    // Proses total
+    let totalGlobalPax = 0, totalGlobalNett = 0;
+    if (totalRow) {
+        totalGlobalPax = parseIndonesianNumber(totalRow[7]);  // GLOBAL PAX di kolom H
+        totalGlobalNett = parseIndonesianNumber(totalRow[8]); // GLOBAL NETT di kolom I
+    }
     
-    // Hitung variance (selisih global pax dengan target pax)
+    // Proses target (berdasarkan gambar: target pax di kolom D, target nett di kolom E)
+    let targetPax = 3600, targetNett = 282644628.10;
+    if (targetRow) {
+        targetPax = parseIndonesianNumber(targetRow[3]) || targetPax;
+        targetNett = parseIndonesianNumber(targetRow[4]) || targetNett;
+    }
+    
+    // Hitung variance
     const variance = totalGlobalPax - targetPax;
+    
+    // Coba ambil variance dari baris variance jika ada (misal kolom H)
+    let variancePercent = variance; // default selisih angka
+    if (varianceRow) {
+        // Mungkin di kolom H ada teks seperti "-95,56%"
+        const varCell = varianceRow[7] || '';
+        if (typeof varCell === 'string' && varCell.includes('%')) {
+            // Tampilkan persentase di card variance
+            variancePercent = varCell;
+        } else {
+            variancePercent = parseIndonesianNumber(varCell) || variance;
+        }
+    }
     
     const summary = {
         total2026: {
@@ -108,7 +148,7 @@ function processSheetData(rows) {
         headers: headers,
         reservations: reservations,
         summary: summary,
-        variance: variance,
+        variance: variancePercent,
         lastUpdate: lastUpdate
     });
 }
@@ -125,8 +165,13 @@ function updateUI(data) {
     
     const variance = data.variance;
     const varianceEl = document.getElementById('variance');
-    varianceEl.textContent = formatNumber(variance);
-    varianceEl.className = variance < 0 ? 'value negative' : 'value positive';
+    // Jika variance berupa string persen, tampilkan langsung
+    if (typeof variance === 'string' && variance.includes('%')) {
+        varianceEl.textContent = variance;
+    } else {
+        varianceEl.textContent = formatNumber(variance);
+    }
+    varianceEl.className = (typeof variance === 'number' && variance < 0) ? 'value negative' : 'value positive';
     
     // Header tabel
     const headerRow = document.getElementById('tableHeader');
@@ -148,7 +193,6 @@ function updateUI(data) {
             if (header) {
                 const td = document.createElement('td');
                 let value = row[header];
-                // Tampilkan sesuai tipe
                 if (header.includes('NETT')) {
                     td.textContent = formatRupiah(value);
                 } else if (header.includes('PAX') || header === 'NO') {
