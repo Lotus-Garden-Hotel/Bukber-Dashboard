@@ -3,7 +3,7 @@
 // ============================================
 const SPREADSHEET_ID = '1WXOjbSZCOpVT9zpEvGfbegkxxaT0nhY6ry3mTUwe0pg';
 const API_KEY = 'AIzaSyBZjSmOA81ftVsIJT5etEL19NjPdYTVSQk';
-const RANGE = 'Sheet1!A2:J38'; // Ambil semua data dari A2 sampai J38
+const RANGE = 'SUMMARY!A2:J38'; // Ambil semua data dari A2 sampai J38
 
 const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
 
@@ -171,5 +171,6 @@ document.addEventListener('DOMContentLoaded', fetchData);
 
 // Refresh setiap 30 detik (sesuaikan kebutuhan)
 setInterval(fetchData, 30000);
+
 
 
