@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSV Bukber 2026 - Live Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ RSV BUKBER 2026</h1>
+            <div class="last-update">
+                Last Update: <span id="lastUpdate">Loading...</span>
+            </div>
+        </header>
+
+        <div class="summary-cards">
+            <div class="card">
+                <h3>Total Global PAX</h3>
+                <div class="value" id="totalPax">0</div>
+            </div>
+            <div class="card">
+                <h3>Total Global NETT</h3>
+                <div class="value" id="totalNett">Rp0</div>
+            </div>
+            <div class="card">
+                <h3>Target PAX</h3>
+                <div class="value" id="targetPax">3.600</div>
+            </div>
+            <div class="card">
+                <h3>Variance</h3>
+                <div class="value negative" id="variance">0</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="reservationTable">
+                <thead>
+                    <tr id="tableHeader"></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
