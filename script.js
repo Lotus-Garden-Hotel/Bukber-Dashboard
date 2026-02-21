@@ -3,9 +3,21 @@
 // ============================================
 const SPREADSHEET_ID = '1WXOjbSZCOpVT9zpEvGfbegkxxaT0nhY6ry3mTUwe0pg';
 const API_KEY = 'AIzaSyBZjSmOA81ftVsIJT5etEL19NjPdYTVSQk';
-const RANGE = 'SUMMARY!A2:J38'; // Ambil semua data dari A2 sampai J38
+const RANGE = 'SUMMARY!A2:I33'; // Header + 30 daily + total + target
 
 const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+
+// ============================================
+// FUNGSI KONVERSI ANGKA INDONESIA
+// ============================================
+function parseIndonesianNumber(str) {
+    if (str === undefined || str === null || str === '') return 0;
+    if (typeof str === 'number') return str;
+    // Hapus "Rp" dan spasi, lalu ganti titik (ribuan) dengan kosong, dan koma dengan titik
+    let cleaned = str.toString().replace(/Rp\s*/i, '').replace(/\./g, '').replace(/,/g, '.').trim();
+    let num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+}
 
 // ============================================
 // FUNGSI AMBIL DATA DARI GOOGLE SHEETS API
@@ -21,7 +33,7 @@ async function fetchData() {
         }
         
         const data = await response.json();
-        console.log('Data from Sheets API:', data); // Untuk debugging
+        console.log('Data from Sheets API:', data);
         
         if (data.values && data.values.length > 0) {
             processSheetData(data.values);
@@ -36,57 +48,73 @@ async function fetchData() {
 }
 
 // ============================================
-// PROSES DATA DARI SHEETS API (ARRAY 2D)
+// PROSES DATA DARI SHEETS API
 // ============================================
-// Ganti bagian processSheetData dengan logika yang lebih dinamis
 function processSheetData(rows) {
+    // rows[0] = header
     const headers = rows[0] || [];
     
-    // Gunakan filter/find untuk mencari baris khusus, jangan tebak indeksnya
-    const totalRow = rows.find(row => row[0] === 'TOTAL') || [];
-    const targetRow = rows.find(row => row[0] === 'TARGET') || [];
-    const varianceRow = rows.find(row => row[0] === 'VARIANCE') || [];
-
-    // Ambil data reservasi (asumsi data adalah baris yang kolom pertamanya berisi tanggal/angka)
-    const reservations = rows.slice(1).filter(row => {
-        // Abaikan baris header, total, target, dan variance
-        return row[0] && !['TOTAL', 'TARGET', 'VARIANCE'].includes(row[0]);
-    }).map(row => {
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = row[i] || 0);
-        return obj;
-    });
-
-    // Helper untuk membersihkan string ke angka
-    const cleanNum = (val) => {
-        if (typeof val === 'number') return val;
-        if (!val) return 0;
-        // Hapus karakter non-angka kecuali titik/koma desimal
-        return parseFloat(val.toString().replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
-    };
-
+    // Data reservasi: baris 1 sampai 30 (indeks 1-30)
+    const reservations = [];
+    for (let i = 1; i <= 30; i++) {
+        if (rows[i]) {
+            const row = rows[i];
+            const reservation = {};
+            headers.forEach((header, index) => {
+                if (header) {
+                    let value = row[index];
+                    // Parse angka untuk kolom yang berisi angka (PAX atau NETT)
+                    if (header.includes('PAX') || header.includes('NETT')) {
+                        reservation[header] = parseIndonesianNumber(value);
+                    } else {
+                        reservation[header] = value !== undefined ? value : '';
+                    }
+                }
+            });
+            reservations.push(reservation);
+        }
+    }
+    
+    // Baris total: indeks 31 (baris ke-32)
+    const totalRow = rows[31] || [];
+    // Baris target: indeks 32 (baris ke-33)
+    const targetRow = rows[32] || [];
+    
+    // Parsing total
+    const totalGlobalPax = parseIndonesianNumber(totalRow[7]);  // GLOBAL PAX di kolom H (indeks 7)
+    const totalGlobalNett = parseIndonesianNumber(totalRow[8]); // GLOBAL NETT di kolom I (indeks 8)
+    
+    // Parsing target: berdasarkan screenshot, target pax di kolom D (indeks 3) dan target nett di kolom E (indeks 4)
+    const targetPax = parseIndonesianNumber(targetRow[3]) || 3600;
+    const targetNett = parseIndonesianNumber(targetRow[4]) || 282644628.10;
+    
+    // Hitung variance (selisih global pax dengan target pax)
+    const variance = totalGlobalPax - targetPax;
+    
     const summary = {
         total2026: {
-            pax: cleanNum(totalRow[7]), 
-            nett: cleanNum(totalRow[8])
+            pax: totalGlobalPax,
+            nett: totalGlobalNett
         },
         target: {
-            pax: cleanNum(targetRow[6]) || 3600,
-            nett: cleanNum(targetRow[7]) || 282644628
+            pax: targetPax,
+            nett: targetNett
         }
     };
-
+    
+    const lastUpdate = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    
     updateUI({
-        headers,
-        reservations,
-        summary,
-        variance: cleanNum(varianceRow[7]),
-        lastUpdate: new Date().toLocaleString('id-ID')
+        headers: headers,
+        reservations: reservations,
+        summary: summary,
+        variance: variance,
+        lastUpdate: lastUpdate
     });
 }
 
 // ============================================
-// FUNGSI UPDATE UI (SAMA SEPERTI SEBELUMNYA)
+// FUNGSI UPDATE UI
 // ============================================
 function updateUI(data) {
     document.getElementById('lastUpdate').textContent = data.lastUpdate;
@@ -120,11 +148,13 @@ function updateUI(data) {
             if (header) {
                 const td = document.createElement('td');
                 let value = row[header];
-                // Format khusus untuk kolom NETT
-                if (header.includes('NETT') || header.includes('nett')) {
+                // Tampilkan sesuai tipe
+                if (header.includes('NETT')) {
                     td.textContent = formatRupiah(value);
+                } else if (header.includes('PAX') || header === 'NO') {
+                    td.textContent = formatNumber(value);
                 } else {
-                    td.textContent = value ?? '0';
+                    td.textContent = value ?? '';
                 }
                 tr.appendChild(td);
             }
@@ -169,8 +199,5 @@ function showError(message) {
 // ============================================
 document.addEventListener('DOMContentLoaded', fetchData);
 
-// Refresh setiap 30 detik (sesuaikan kebutuhan)
+// Refresh setiap 30 detik
 setInterval(fetchData, 30000);
-
-
-
