@@ -1,146 +1,141 @@
 // ============================================
-// KONFIGURASI - GANTI DENGAN URL APPS SCRIPT ANDA
+// KONFIGURASI GOOGLE SHEETS API
 // ============================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxqgmKU4knjw3cGe5S7-sxYt4I0161xM0yh2U8G8unQ/dev';
+const SPREADSHEET_ID = '1WXOjbSZCOpVT9zpEvGfbegkxxaT0nhY6ry3mTUwe0pg';
+const API_KEY = 'AIzaSyBZjSmOA81ftVsIJT5etEL19NjPdYTVSQk';
+const RANGE = 'Sheet1!A1:I33'; // Ambil semua data dari A1 sampai I33
+
+const API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
 
 // ============================================
-// FUNGSI UTAMA - AMBIL DATA LIVE
+// FUNGSI AMBIL DATA DARI GOOGLE SHEETS API
 // ============================================
 async function fetchData() {
     showLoading();
     
     try {
-        // Coba fetch biasa dulu
-        await fetchWithFetch();
-    } catch (error) {
-        console.log('Fetch gagal, beralih ke JSONP:', error);
-        // Fallback ke JSONP
-        fetchWithJSONP();
-    }
-}
-
-// Method 1: Menggunakan Fetch API (lebih modern)
-async function fetchWithFetch() {
-    const response = await fetch(API_URL, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-            'Accept': 'application/json'
-        }
-    });
-    
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    
-    if (result.success) {
-        updateUI(result.data);
-    } else {
-        throw new Error(result.error || 'Gagal mengambil data');
-    }
-}
-
-// Method 2: Menggunakan JSONP (untuk hindari CORS)
-function fetchWithJSONP() {
-    const callbackName = 'callback_' + Date.now();
-    
-    // Buat fungsi callback global
-    window[callbackName] = function(data) {
-        if (data.success) {
-            updateUI(data.data);
-        } else {
-            showError('Error: ' + (data.error || 'Unknown error'));
+        const response = await fetch(API_URL);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // Bersihkan setelah selesai
-        delete window[callbackName];
-        document.body.removeChild(script);
-    };
-    
-    // Buat script tag untuk JSONP
-    const script = document.createElement('script');
-    script.src = API_URL + '?callback=' + callbackName;
-    
-    script.onerror = function() {
-        showError('Gagal terhubung ke server. Periksa koneksi Anda.');
-        delete window[callbackName];
-        document.body.removeChild(script);
-    };
-    
-    document.body.appendChild(script);
+        const data = await response.json();
+        console.log('Data from Sheets API:', data); // Untuk debugging
+        
+        if (data.values && data.values.length > 0) {
+            processSheetData(data.values);
+        } else {
+            throw new Error('Tidak ada data ditemukan');
+        }
+        
+    } catch (error) {
+        console.error('Fetch error:', error);
+        showError('Gagal memuat data: ' + error.message);
+    }
 }
 
 // ============================================
-// FUNGSI UPDATE UI
+// PROSES DATA DARI SHEETS API (ARRAY 2D)
+// ============================================
+function processSheetData(rows) {
+    // rows adalah array 2D: [ [header1, header2, ...], [baris1], [baris2], ... ]
+    
+    // Header ada di baris pertama (indeks 0)
+    const headers = rows[0] || [];
+    
+    // Data reservasi: baris 1 sampai 30 (indeks 1-30) sesuai data Anda
+    const reservations = [];
+    for (let i = 1; i <= 30; i++) {
+        if (rows[i]) {
+            const row = rows[i];
+            const reservation = {};
+            headers.forEach((header, index) => {
+                if (header) {
+                    reservation[header] = row[index] !== undefined ? row[index] : 0;
+                }
+            });
+            reservations.push(reservation);
+        }
+    }
+    
+    // Baris total: indeks 30 (baris ke-31)
+    const totalRow = rows[30] || [];
+    // Baris target: indeks 31 (baris ke-32)
+    const targetRow = rows[31] || [];
+    // Baris variance: indeks 32 (baris ke-33)
+    const varianceRow = rows[32] || [];
+    
+    const summary = {
+        total2026: {
+            pax: totalRow[7] || 0,   // GLOBAL PAX (kolom H)
+            nett: totalRow[8] || 0    // GLOBAL NETT (kolom I)
+        },
+        target: {
+            pax: targetRow[6] || 3600, // TARGET PAX (kolom G)
+            nett: targetRow[7] || 282644628.10 // TARGET NETT (kolom H)
+        }
+    };
+    
+    const variance = varianceRow[7] || 0; // VARIANCE (kolom H)
+    
+    const lastUpdate = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    
+    updateUI({
+        headers: headers,
+        reservations: reservations,
+        summary: summary,
+        variance: variance,
+        lastUpdate: lastUpdate
+    });
+}
+
+// ============================================
+// FUNGSI UPDATE UI (SAMA SEPERTI SEBELUMNYA)
 // ============================================
 function updateUI(data) {
-    console.log('Data received:', data); // Untuk debugging
+    document.getElementById('lastUpdate').textContent = data.lastUpdate;
     
-    // Update last update time
-    document.getElementById('lastUpdate').textContent = data.lastUpdate || 'Just now';
-    
-    // Update summary cards
-    document.getElementById('totalPax').textContent = 
-        formatNumber(data.summary.total2026.pax);
-    document.getElementById('totalNett').textContent = 
-        formatRupiah(data.summary.total2026.nett);
-    document.getElementById('targetPax').textContent = 
-        formatNumber(data.summary.target.pax);
+    document.getElementById('totalPax').textContent = formatNumber(data.summary.total2026.pax);
+    document.getElementById('totalNett').textContent = formatRupiah(data.summary.total2026.nett);
+    document.getElementById('targetPax').textContent = formatNumber(data.summary.target.pax);
     
     const variance = data.variance;
     const varianceEl = document.getElementById('variance');
     varianceEl.textContent = formatNumber(variance);
     varianceEl.className = variance < 0 ? 'value negative' : 'value positive';
     
-    // Update table header
+    // Header tabel
     const headerRow = document.getElementById('tableHeader');
     headerRow.innerHTML = '';
     data.headers.forEach(header => {
-        if (header) { // Hanya jika header tidak kosong
+        if (header) {
             const th = document.createElement('th');
             th.textContent = header;
             headerRow.appendChild(th);
         }
     });
     
-    // Update table body
+    // Body tabel
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
-    
-    data.reservations.forEach((row, index) => {
+    data.reservations.forEach(row => {
         const tr = document.createElement('tr');
-        
         data.headers.forEach(header => {
             if (header) {
                 const td = document.createElement('td');
                 let value = row[header];
-                
-                // Format berdasarkan tipe kolom
+                // Format khusus untuk kolom NETT
                 if (header.includes('NETT') || header.includes('nett')) {
                     td.textContent = formatRupiah(value);
-                } else if (header.includes('DATE') || header.includes('date')) {
-                    td.textContent = value || '-';
                 } else {
-                    td.textContent = value !== undefined && value !== null ? value : '0';
+                    td.textContent = value ?? '0';
                 }
-                
-                // Highlight baris total
-                if (index === 29) { // Baris terakhir (total)
-                    td.style.fontWeight = 'bold';
-                    td.style.backgroundColor = '#f0f0f0';
-                }
-                
                 tr.appendChild(td);
             }
         });
-        
         tbody.appendChild(tr);
     });
-    
-    // Sembunyikan pesan error jika ada
-    hideError();
 }
 
 // ============================================
@@ -166,7 +161,7 @@ function formatRupiah(num) {
 // ============================================
 function showLoading() {
     document.getElementById('tableBody').innerHTML = 
-        '<tr><td colspan="8" class="loading">⏳ Memuat data live dari spreadsheet...</td></tr>';
+        '<tr><td colspan="8" class="loading">⏳ Memuat data dari Google Sheets...</td></tr>';
 }
 
 function showError(message) {
@@ -174,17 +169,10 @@ function showError(message) {
         `<tr><td colspan="8" class="error">❌ ${message}</td></tr>`;
 }
 
-function hideError() {
-    // Tidak perlu implementasi khusus
-}
-
 // ============================================
 // INISIALISASI
 // ============================================
 document.addEventListener('DOMContentLoaded', fetchData);
 
-// Auto refresh setiap 30 detik (sesuaikan kebutuhan)
-setInterval(fetchData, 30000); // 30 detik untuk real-time
-
-// Refresh manual dengan tombol F5
-console.log('🚀 Dashboard Bukber 2026 - Live dari Spreadsheet');
+// Refresh setiap 30 detik (sesuaikan kebutuhan)
+setInterval(fetchData, 30000);
