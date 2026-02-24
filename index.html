@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard Iftar Lotus 2026</title>
+    <title>Dashboard Iftar 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
@@ -12,12 +12,12 @@
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background-color: #020617; 
             color: #f8fafc; 
-            height: 100vh;
-            height: -webkit-fill-available;
+            /* Memberikan ruang ekstra di bawah agar tidak terpotong sistem Android */
+            height: calc(100vh - 35px); 
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            padding: 12px;
+            padding: 8px;
             margin: 0;
         }
 
@@ -28,90 +28,78 @@
             justify-content: center;
             align-items: center;
             text-align: center;
-            border-radius: 1.5rem;
+            border-radius: 1.25rem;
             width: 100%;
         }
 
         .card-today { background: linear-gradient(135deg, #1e1b4b 0%, #020617 100%); border: 1px solid rgba(99, 102, 241, 0.4); }
-        .card-confirm { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); }
-        .card-tentative { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
-        .glass { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .card-confirm { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .card-tentative { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .glass { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.1); }
         
         #progress-bar { transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tight-text { letter-spacing: -0.04em; line-height: 1; }
     </style>
-	</head>
-<body class="min-h-screen pb-12 overflow-x-hidden">
-
-    <nav class="sticky top-0 z-50 px-5 py-4 glass border-b border-white/5 flex justify-between items-center">
-        <div class="max-w-[65%]">
-            <h1 class="text-sm font-extrabold leading-tight">Dashboard Bukber Summary-Lotus Garden Hotel<span class="text-indigo-500">2026</span></h1>
-            <p id="last-sync" class="text-[7px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 italic">Connecting...</p>
-        </div>
-        <div class="flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1.5 rounded-full border border-emerald-500/20 text-emerald-500">
-            <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,1)]"></div>
-            <span class="text-[8px] font-black uppercase tracking-tighter">Live</span>
-        </div>
-    </nav>
 </head>
 <body class="space-y-2">
 
-    <section class="card-today flex-card border-t-4 border-indigo-500">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300 mb-2">Today Iftar</p>
-        <div class="flex justify-around items-center w-full px-4">
+    <section class="card-today flex-card border-t-2 border-indigo-500">
+        <p class="text-[15px] font-extrabold uppercase tracking-[0.3em] text-indigo-400 mb-2">TODAY IFTAR</p>
+        <div class="flex justify-around items-center w-full">
             <div class="text-center">
-                <h3 id="today-pax" class="text-5xl font-extrabold text-white leading-none tracking-tighter">--</h3>
-                <p class="text-[9px] uppercase font-bold text-slate-500 mt-2">Pax Terdaftar</p>
+                <h3 id="today-pax" class="text-5xl font-extrabold text-white leading-none">--</h3>
+                <p class="text-[8px] uppercase font-bold text-slate-500 mt-1">Total Pax</p>
             </div>
             <div class="h-10 w-[1px] bg-white/10"></div>
             <div class="text-center">
-                <h3 id="today-rev" class="text-2xl font-black text-emerald-400 leading-none">--</h3>
-                <p class="text-[9px] uppercase font-bold text-slate-500 mt-2">Est. Revenue</p>
+                <h3 id="today-rev" class="text-xl font-black text-emerald-400 leading-none">--</h3>
+                <p class="text-[8px] uppercase font-bold text-slate-500 mt-1">Est. Revenue</p>
             </div>
         </div>
     </section>
 
-    <section class="bg-gradient-to-br from-indigo-700 to-indigo-950 flex-card shadow-2xl px-6 py-4">
-        <p class="text-indigo-200 text-[10px] font-bold uppercase tracking-[0.3em] mb-1">Actual Global Nett MTD</p>
+    <section class="bg-gradient-to-br from-indigo-700 to-indigo-950 flex-card shadow-xl px-4">
+        <p class="text-indigo-200 text-[9px] font-bold uppercase tracking-[0.3em] mb-2">Actual Global Nett MTD</p>
         
-        <h2 id="target-actual-global" class="text-4xl font-black tracking-tight text-white mb-1 drop-shadow-md">--</h2>
+        <h2 id="target-actual-global" class="text-4xl font-black tight-text text-white mb-2 drop-shadow-md">--</h2>
         
-        <div class="flex items-center gap-2 mb-4">
-            <span class="text-indigo-300 text-[10px] uppercase font-bold italic">Achievement:</span>
-            <span id="target-achievement" class="text-2xl font-black text-white italic tracking-tighter">--</span>
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-indigo-300 text-[10px] font-bold italic uppercase">Achievement:</span>
+            <span id="target-achievement" class="text-2xl font-black text-white italic">--</span>
         </div>
         
-        <div class="w-full">
-            <div class="bg-black/30 rounded-full h-3 p-0.5 border border-white/10">
-                <div id="progress-bar" class="bg-white h-full rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" style="width: 0%"></div>
+        <div class="w-full px-4">
+            <div class="bg-black/40 rounded-full h-3 p-0.5 border border-white/5">
+                <div id="progress-bar" class="bg-white h-full rounded-full shadow-[0_0_10px_white]" style="width: 0%"></div>
             </div>
         </div>
     </section>
 
     <div class="flex gap-2 shrink-0 h-[14vh]">
         <div class="card-confirm flex-card">
-            <p class="text-[8px] font-bold uppercase text-emerald-500 mb-1">Confirm MTD</p>
-            <h3 id="confirm-pax" class="text-3xl font-black text-white leading-none">--</h3>
-            <p id="confirm-rev" class="text-[9px] font-bold text-slate-400 mt-1">--</p>
+            <p class="text-[8px] font-bold uppercase text-emerald-500 mb-1">Confirm</p>
+            <h3 id="confirm-pax" class="text-2xl font-black text-white leading-none">--</h3>
+            <p id="confirm-rev" class="text-[8px] font-bold text-slate-400 mt-0.5">--</p>
         </div>
         <div class="card-tentative flex-card">
-            <p class="text-[8px] font-bold uppercase text-amber-500 mb-1">Tentative MTD</p>
-            <h3 id="tentative-pax" class="text-3xl font-black text-white leading-none">--</h3>
-            <p id="tentative-rev" class="text-[9px] font-bold text-slate-400 mt-1">--</p>
+            <p class="text-[8px] font-bold uppercase text-amber-500 mb-1">Tentative</p>
+            <h3 id="tentative-pax" class="text-2xl font-black text-white leading-none">--</h3>
+            <p id="tentative-rev" class="text-[8px] font-bold text-slate-400 mt-0.5">--</p>
         </div>
     </div>
 
-    <section class="glass flex-card border-b-4 border-red-500">
+    <section class="glass flex-card border-b-2 border-red-500 py-2">
         <div class="w-full">
-            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Budget Target MTD</p>
-            <h3 id="budget-rev" class="text-2xl font-extrabold text-white leading-none">--</h3>
-            <p id="budget-pax" class="text-[10px] text-indigo-400 font-bold mt-1 uppercase tracking-tighter">-- Pax Target</p>
+            <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Budget Target MTD</p>
+            <h3 id="budget-rev" class="text-2xl font-extrabold text-white mt-0.5 leading-none">--</h3>
+            <p id="budget-pax" class="text-[9px] text-indigo-400 font-bold uppercase">-- Pax Target</p>
         </div>
         
-        <div class="w-1/2 h-[1px] bg-white/10 my-3"></div>
+        <div class="w-1/4 h-[1px] bg-white/10 my-2"></div>
         
         <div class="w-full">
-            <p class="text-[9px] font-bold text-red-400 uppercase tracking-widest italic mb-1">Variance Gap MTD</p>
-            <h3 id="target-variance" class="text-3xl font-black text-red-500 tracking-tighter leading-none">--</h3>
+            <p class="text-[9px] font-bold text-red-400 uppercase tracking-widest italic">Variance Gap MTD</p>
+            <h3 id="target-variance" class="text-3xl font-black text-red-500 tracking-tighter mt-0.5 leading-none">--</h3>
         </div>
     </section>
 
@@ -151,19 +139,14 @@
 
                     document.getElementById('today-pax').innerText = tPax;
                     document.getElementById('today-rev').innerText = tRev;
-                    
-                    // Actual lebih besar (Text-4xl)
                     document.getElementById('target-actual-global').innerText = row36[9] || "Rp0";
-                    // Achievement lebih kecil (Text-2xl)
                     document.getElementById('target-achievement').innerText = row36[1] || "0%";
-                    
                     document.getElementById('confirm-pax').innerText = row36[4] || "0";
                     document.getElementById('confirm-rev').innerText = row36[5] || "Rp0";
                     document.getElementById('tentative-pax').innerText = row36[6] || "0";
                     document.getElementById('tentative-rev').innerText = row36[7] || "Rp0";
-                    
                     document.getElementById('budget-rev').innerText = row37[5] || "Rp0";
-                    document.getElementById('budget-pax').innerText = (row37[4] || "0");
+                    document.getElementById('budget-pax').innerText = row37[4] || "0";
                     document.getElementById('target-variance').innerText = row38[5] || "Rp0";
 
                     const achStr = (row36[1] || "0").replace('%', '').replace(',', '.');
