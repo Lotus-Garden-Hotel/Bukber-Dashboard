@@ -13,7 +13,7 @@
             color: #f8fafc; 
             height: 100dvh; 
             display: grid;
-            grid-template-rows: 1fr 1.3fr 0.8fr 1.2fr;
+            grid-template-rows: 1fr 1.35fr 0.8fr 1.25fr;
             gap: 8px;
             padding: 10px;
             margin: 0;
@@ -57,6 +57,7 @@
             <div class="bg-black/40 rounded-full h-3 p-0.5 border border-white/5">
                 <div id="progress-bar" class="bg-white h-full rounded-full" style="width: 0%"></div>
             </div>
+            <p id="pax-global" class="text-[9px] text-indigo-200 font-bold uppercase mt-2 tracking-widest">0 PAX GLOBAL</p>
         </div>
     </section>
 
@@ -91,7 +92,7 @@
         const API_CONFIG = {
             sheetId: '1WXOjbSZCOpVT9zpEvGfbegkxxaT0nhY6ry3mTUwe0pg',
             apiKey: 'AIzaSyBZjSmOA81ftVsIJT5etEL19NjPdYTVSQk',
-            range: 'Summary!A1:L40' // Range diperlebar sampai kolom L untuk keamanan
+            range: 'Summary!A1:L40'
         };
 
         function getTodayString() {
@@ -109,12 +110,10 @@
                     const rows = data.values;
                     const todayStr = getTodayString();
 
-                    // Perbaikan Baris (Row 36, 37, 38 di Sheet = Index 35, 36, 37 di Code)
                     const row36 = rows[35] || [];
                     const row37 = rows[36] || [];
                     const row38 = rows[37] || [];
 
-                    // 1. Update Today Iftar (Baris 6-35)
                     let tPax = "0", tRev = "Rp0";
                     for (let i = 5; i <= 34; i++) {
                         if (rows[i] && rows[i][2] && rows[i][2].toString().includes(todayStr)) {
@@ -126,24 +125,24 @@
                     document.getElementById('today-pax').innerText = tPax;
                     document.getElementById('today-rev').innerText = tRev;
 
-                    // 2. Achievement (Baris 36)
+                    // Achievement & Pax Global (Baris 36)
                     document.getElementById('target-actual-global').innerText = row36[9] || "Rp0";
                     document.getElementById('target-achievement').innerText = row36[1] || "0%";
+                    document.getElementById('pax-global').innerText = (row36[8] || "0") + " PAX GLOBAL";
+                    
                     document.getElementById('confirm-pax').innerText = row36[4] || "0";
                     document.getElementById('confirm-rev').innerText = row36[5] || "Rp0";
                     document.getElementById('tentative-pax').innerText = row36[6] || "0";
                     document.getElementById('tentative-rev').innerText = row36[7] || "Rp0";
 
-                    // 3. Budget (Baris 37)
+                    // Budget (Baris 37)
                     document.getElementById('budget-rev').innerText = row37[5] || "Rp0";
                     document.getElementById('budget-pax').innerText = (row37[4] || "0") + " PAX";
 
-                    // 4. Variance (Baris 38)
-                    // Kolom J (Gap MTD) = Index 9 | Kolom I (Pax Gap) = Index 8
+                    // Variance (Baris 38)
                     document.getElementById('target-variance').innerText = row38[9] || "Rp0";
                     document.getElementById('variance-pax').innerText = (row38[8] || "0") + " PAX GAP";
 
-                    // Progress Bar
                     const achStr = (row36[1] || "0").replace('%', '').replace(',', '.');
                     document.getElementById('progress-bar').style.width = Math.min(parseFloat(achStr), 100) + '%';
                 }
